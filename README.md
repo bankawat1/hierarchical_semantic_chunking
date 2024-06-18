@@ -1,4 +1,4 @@
-# Hierarchical Semantic Chunking
+# Hierarchical Semantic Chunking for LLMs
 
 **Objective:**
 The entire purpose of this repository is to develop an algorithm that can intelligently create meaningful chunks of the text before sending to a limited token-size LLM.
