@@ -18,6 +18,16 @@ THRESHOLD_DECREASING_SPEED = 0.1
 
 # process data
 def pre_process_data(conv: str):
+    """
+    Preprocesses the conversation string by removing speaker identifiers.
+
+    Args:
+        conv: The conversation string containing speaker identifiers (e.g., "spk_0: Hello").
+
+    Returns:
+        A list of processed sentences without speaker identifiers.
+    """
+    
     processed_data = []
     for phrase in conv.split('\n'):
         processed_data.append(re.sub(r'((spk_0)|(spk_1)):\s+','',phrase))
@@ -26,6 +36,17 @@ def pre_process_data(conv: str):
 
 #combine sentence non-overlap
 def combine_sentences_non_overlap(sentences,buffer_size=5):
+    """
+    Combines sentences within a buffer range to create context for each sentence.
+
+    Args:
+        sentences: A list of dictionaries, each containing a sentence and its index.
+        buffer_size: The number of sentences to consider before and after each sentence.
+
+    Returns:
+        A list of dictionaries with added keys for combined previous and next sentences.
+    """
+    
     for i in range(len(sentences)):
         combined_sent = ""
 
@@ -58,6 +79,17 @@ if USE_SENTENCE_TRANSFORMER:
 
 
 def get_sent_transformer_embeddings(comb_sent_prev,comb_sent_next):
+    """
+    Generates sentence embeddings for previous and next context sentences using SentenceTransformer.
+
+    Args:
+        comb_sent_prev: A list of combined previous sentences.
+        comb_sent_next: A list of combined next sentences.
+
+    Returns:
+        A tuple containing numpy arrays of embeddings for previous and next sentences.
+    """
+    
     embeddings_prev = sent_model.encode(comb_sent_prev,batch_size=128, show_progress_bar=True, convert_to_tensor=True)
     print(embeddings_prev.shape)
 
@@ -70,13 +102,38 @@ def get_sent_transformer_embeddings(comb_sent_prev,comb_sent_next):
     return embeddings_prev, embeddings_next
 
 def normalize_data(embeddings_prev, embeddings_next):
+    """
+    Normalizes the embeddings using L2 normalization.
+
+    Args:
+        embeddings_prev: Embeddings for previous sentences.
+        embeddings_next: Embeddings for next sentences.
+
+    Returns:
+        A tuple containing normalized embeddings for previous and next sentences.
+    """
+    
     norm_emb_prev = normalize(embeddings_prev, norm='L2')
     norm_emb_next = normalize(embeddings_next,norm='L2')
 
     return norm_emb_prev, norm_emb_next
 
+
 # perform cosine similarity check
 def calculate_cosine_distance(sentences, norm_emb_prev, norm_emb_next):
+    """
+    Calculates the cosine distance between normalized embeddings of previous and next sentences.
+
+    Args:
+        sentences: A list of dictionaries containing sentence information.
+        norm_emb_prev: Normalized embeddings for previous sentences.
+        norm_emb_next: Normalized embeddings for next sentences.
+
+    Returns:
+        A tuple containing a list of cosine distances and the updated list of sentences 
+        with distance information.
+    """
+    
     distances = []
     for i in range(len(norm_emb_prev)):
 
@@ -96,7 +153,17 @@ def calculate_cosine_distance(sentences, norm_emb_prev, norm_emb_next):
 
 
 def find_peak_values(threshold:float, distances: List[float]):
-    # 
+    """
+    Identifies peak values in the cosine distances that are above a given threshold.
+
+    Args:
+        threshold: The threshold value for identifying peaks.
+        distances: A list of cosine distances.
+
+    Returns:
+        A list of indices representing the peak values in the distances.
+    """
+    
     vals = [0 if dist < threshold else dist for dist in distances]
 
     # no value above threshold then return an empty array
@@ -123,6 +190,16 @@ def find_peak_values(threshold:float, distances: List[float]):
 
 
 def merge_small_chunks(processed_data, indices):
+    """
+    Merges small chunks of text to ensure they meet the minimum token size requirement.
+
+    Args:
+        processed_data: A list of processed sentences.
+        indices: A list of indices representing potential split points.
+
+    Returns:
+        A list of indices representing the final split points after merging small chunks.
+    """
     
     m_chunk_arr = [0]
     win_arr = np.lib.stride_tricks.sliding_window_view(np.array(indices), 2, axis=0)
@@ -146,7 +223,17 @@ def merge_small_chunks(processed_data, indices):
 
 
 def calculate_chunk_sizes(processed_data: List[str], split_boundries_arr: List[int]) -> List[int]:
-    # add buffer size to get abolute indices
+    """
+    Calculates the size of each chunk in terms of number of words.
+
+    Args:
+        processed_data: A list of processed sentences.
+        split_boundries_arr: A list of indices representing the split points.
+
+    Returns:
+        A list of chunk sizes.
+    """
+    
     adjusted_buffer_boundries = split_boundries_arr + BUFFER_SIZE
     print('split_boundries_arr', split_boundries_arr)
 
@@ -164,6 +251,19 @@ def calculate_chunk_sizes(processed_data: List[str], split_boundries_arr: List[i
 
 
 def all_chunks_big(processed_data,threshold, distances):
+    """
+    Checks if all chunks after splitting with the given threshold are larger than the 
+    maximum allowed token size.
+
+    Args:
+        processed_data: A list of processed sentences.
+        threshold: The threshold value for identifying peaks in cosine distances.
+        distances: A list of cosine distances.
+
+    Returns:
+        True if all chunks are larger than the maximum token size, False otherwise.
+    """
+    
     split_borders_indices = find_peak_values(threshold, distances)
 
     if len(split_borders_indices) == 0:
@@ -177,6 +277,18 @@ def all_chunks_big(processed_data,threshold, distances):
 
 
 def optimized_peak_values(processed_data, distances):
+    """
+    Finds the optimal peak values in cosine distances by iteratively decreasing the 
+    threshold until all chunks are smaller than the maximum token size.
+
+    Args:
+        processed_data: A list of processed sentences.
+        distances: A list of cosine distances.
+
+    Returns:
+        A list of indices representing the final split points.
+    """
+    
     threshold = 1.0
     while all_chunks_big(processed_data, threshold, distances):
         threshold -= 0.01* THRESHOLD_DECREASING_SPEED
@@ -190,6 +302,17 @@ def optimized_peak_values(processed_data, distances):
 
 
 def prepare_text_chunks(processed_data, distances):
+    """
+    Prepares the final text chunks for dispatch to the language model.
+
+    Args:
+        processed_data: A list of processed sentences.
+        distances: A list of cosine distances.
+
+    Returns:
+        A list of text chunks, where each chunk is a list of sentences.
+    """
+    
     opv = optimized_peak_values(processed_data, distances)
     pv = merge_small_chunks(processed_data, opv)
     print(pv)
@@ -200,6 +323,20 @@ def prepare_text_chunks(processed_data, distances):
 
 
 def invoke_semantic_chunking(conv: str) -> List[str]:
+    """
+    Performs semantic chunking on a conversation string.
+
+    This function preprocesses the conversation, generates sentence embeddings,
+    calculates cosine distances between sentences, and identifies optimal split points
+    to create chunks suitable for processing by a language model.
+
+    Args:
+        conv: The conversation string.
+
+    Returns:
+        A list of text chunks, where each chunk is a list of sentences.
+    """
+    
     processed_data = pre_process_data(conv)
 
     sentences = [{'sentence':x,'index':i} for i,x in enumerate(processed_data)]
