@@ -8,7 +8,8 @@ The entire purpose of this repository is to develop an algorithm that can intell
 Note: This version of H-Semantic chunking is focused on transcripts (i.e. conversation between two person)
 
 **Pros:**
-It uses an advanced approach to find the breakpoints than what you get from the off-the-shelf Langchain semantic chunking package (https://python.langchain.com/v0.2/docs/how_to/semantic-chunker/).
+It uses an advanced approach to find the breakpoints which is inspired from an off-the-shelf Langchain semantic chunking package (https://python.langchain.com/v0.2/docs/how_to/semantic-chunker/).
+This is an extends the above algorithm.
 
 **Model:** SentenceTransformer
 
