@@ -15,6 +15,8 @@ Note: This version of H-Semantic chunking is focused on transcripts (i.e. a conv
 **Advantage:**
 It uses an advanced approach to find the breakpoints which extends the off-the-shelf Langchain semantic chunking package (https://python.langchain.com/v0.2/docs/how_to/semantic-chunker/).
 
+**Usage:** 
+Call invoke_semantic_chunking() function passing document as text to it.
 
 **Model:** SentenceTransformer
 
