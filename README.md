@@ -18,7 +18,7 @@ It uses an advanced approach to find the breakpoints which extends the off-the-s
 **Usage:** 
 Call invoke_semantic_chunking() function passing document as text to it.
 
-**Model:** SentenceTransformer
+**Model:** SentenceTransformer (all-MiniLM-L6). Weight file to be downloaded before using this library.
 
 **Input**: An audio transcript split into sentences.
 
