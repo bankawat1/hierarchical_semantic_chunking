@@ -20,7 +20,7 @@ Call invoke_semantic_chunking() function passing document as text to it.
 
 **Model:** SentenceTransformer (all-MiniLM-L6). Weight file to be downloaded before using this library.
 
-**Input**: Any text document that is long enough to be split into chunks. Recommended to have anything greater than 300 sentences.
+**Input**: Any text document that is long enough to be split into chunks. Recommended to have anything greater than 500 sentences.
 
 **Output**: Indices of the sentences which represent the breakpoints for creating chunks.
 
