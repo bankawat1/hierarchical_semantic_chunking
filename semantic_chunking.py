@@ -3,13 +3,14 @@ from sklearn.preprocessing import normalize
 import numpy as np
 import seaborn as sns
 from sklearn.metrics.pairwise import cosine_similarity
-import gpt_ada_embedding_api
+# import gpt_ada_embedding_api
 from typing import List
 
 import re
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
+import subprocess
 
 #Declaring constants
 BUFFER_SIZE = 25
@@ -72,10 +73,15 @@ def combine_sentences_non_overlap(sentences,buffer_size=5):
 
 USE_SENTENCE_TRANSFORMER= True
 if USE_SENTENCE_TRANSFORMER:
-    get_ipython().system('pip install sentence-transformers --q')
+    try:
+        get_ipython().system('pip install sentence-transformers --q')
+    except NameError:
+        subprocess.check_call(['pip', 'install', 'sentence-transformers', '--quiet'])
 
-    from sentence-transformers import SentenceTransfomer, util
-    sent_model = SentenceTransfomer('/root/pretrained/all-MiniLM-L6/v2')
+    from sentence_transformers import SentenceTransformer, util
+
+    sent_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+    print('SentenceTransformer model loaded')
 
 
 def get_sent_transformer_embeddings(comb_sent_prev,comb_sent_next):
