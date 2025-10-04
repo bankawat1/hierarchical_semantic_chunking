@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "pyyaml>=6.0.2",
     "seaborn>=0.13.2",
     "sentence-transformers>=5.1.0",
 ]

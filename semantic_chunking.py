@@ -11,9 +11,11 @@ import time
 import pandas as pd
 import matplotlib.pyplot as plt
 import subprocess
+import logging
+logger = logging.getLogger(__name__)  # Create a logger for this module 
 
 #Declaring constants
-BUFFER_SIZE = 25
+BUFFER_SIZE = 7
 LLM_MAX_TOKENS = 8000
 THRESHOLD_DECREASING_SPEED = 0.1
 
@@ -30,8 +32,8 @@ def pre_process_data(conv: str):
     """
     
     processed_data = []
-    for phrase in conv.split('\n'):
-        processed_data.append(re.sub(r'((spk_0)|(spk_1)):\s+','',phrase))
+    conv = re.sub(r'\n+','\n',conv)
+    processed_data = [phrase for phrase in conv.split('\n') if phrase != '']
     return processed_data
 
 
@@ -57,12 +59,12 @@ def combine_sentences_non_overlap(sentences,buffer_size=5):
             next_sent = ''
 
             for j in range(i-buffer_size,i):
-                previous_sent += sentences[j]['sentence']+ ' '
+                previous_sent += sentences[j]['sentence'] + '.'
 
             sentences[i]['combined_sentence_previous'] = previous_sent
 
             for k in range(i,i + buffer_size):
-                next_sent += sentences[k]['sentence'] + ' '
+                next_sent += sentences[k]['sentence'] + '.'
             
             sentences[i]['combined_sentence_next'] = next_sent
         else:
@@ -95,12 +97,13 @@ def get_sent_transformer_embeddings(comb_sent_prev,comb_sent_next):
     Returns:
         A tuple containing numpy arrays of embeddings for previous and next sentences.
     """
+    logger.debug("Generating sentence embeddings using SentenceTransformer model")
     
     embeddings_prev = sent_model.encode(comb_sent_prev,batch_size=128, show_progress_bar=True, convert_to_tensor=True)
-    print(embeddings_prev.shape)
+    logger.debug("embeddings_prev.shape", embeddings_prev.shape)
 
     embeddings_next = sent_model.encode(comb_sent_next,batch_size=128, show_progress_bar=True, convert_to_tensor=True)
-    print(embeddings_prev.shape)
+    logger.debug("embeddings_next.shape", embeddings_next.shape)
 
     embeddings_prev = embeddings_prev.cpu().numpy()
     embeddings_next = embeddings_next.cpu().numpy()
@@ -119,8 +122,8 @@ def normalize_data(embeddings_prev, embeddings_next):
         A tuple containing normalized embeddings for previous and next sentences.
     """
     
-    norm_emb_prev = normalize(embeddings_prev, norm='L2')
-    norm_emb_next = normalize(embeddings_next,norm='L2')
+    norm_emb_prev = normalize(embeddings_prev, norm='l2')
+    norm_emb_next = normalize(embeddings_next,norm='l2')
 
     return norm_emb_prev, norm_emb_next
 
@@ -176,7 +179,7 @@ def find_peak_values(threshold:float, distances: List[float]):
     if (np.array(vals) == 0).all():
         return np.array([])
     
-    final_peak_value = []
+    final_peak_values = []
     for i in range(len(vals)-1):
         if vals[i] != vals[i+1]:
             final_peak_values.append(vals[i])
@@ -343,13 +346,17 @@ def invoke_semantic_chunking(conv: str) -> List[str]:
         A list of text chunks, where each chunk is a list of sentences.
     """
     
+    logger.debug("Starting semantic chunking process.")
+
     processed_data = pre_process_data(conv)
+
+    logger.debug("processed_data length: %d", len(processed_data))
 
     sentences = [{'sentence':x,'index':i} for i,x in enumerate(processed_data)]
     sentences = combine_sentences_non_overlap(sentences, BUFFER_SIZE)
 
-    comb_sent_prev = [dict['combined_sentence_previous'] for dic in sentences]
-    comb_sent_next = [dict['combined_sentence_next'] for dic in sentences]
+    comb_sent_prev = [dic['combined_sentence_previous'] for dic in sentences]
+    comb_sent_next = [dic['combined_sentence_next'] for dic in sentences]
 
     print(comb_sent_prev.__len__(), comb_sent_next.__len__())
     embeddings_prev, embeddings_next = get_sent_transformer_embeddings(comb_sent_prev, comb_sent_next)
