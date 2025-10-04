@@ -28,6 +28,8 @@ Call invoke_semantic_chunking() function passing document as text to it.
 
 **Space complexity:** TBD
 
+**To run the code:** uv run ./sample.py
+
 
 
 
