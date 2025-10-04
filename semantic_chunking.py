@@ -100,10 +100,10 @@ def get_sent_transformer_embeddings(comb_sent_prev,comb_sent_next):
     logger.debug("Generating sentence embeddings using SentenceTransformer model")
     
     embeddings_prev = sent_model.encode(comb_sent_prev,batch_size=128, show_progress_bar=True, convert_to_tensor=True)
-    logger.debug("embeddings_prev.shape", embeddings_prev.shape)
+    logger.debug("embeddings_prev.shape: %s", embeddings_prev.shape)
 
     embeddings_next = sent_model.encode(comb_sent_next,batch_size=128, show_progress_bar=True, convert_to_tensor=True)
-    logger.debug("embeddings_next.shape", embeddings_next.shape)
+    logger.debug("embeddings_next.shape: %s", embeddings_next.shape)
 
     embeddings_prev = embeddings_prev.cpu().numpy()
     embeddings_next = embeddings_next.cpu().numpy()
@@ -310,6 +310,16 @@ def optimized_peak_values(processed_data, distances):
     return [0]+list(peak_indices+ BUFFER_SIZE) + [len(processed_data)]
 
 
+def log_distances_img_file(distances, opv):
+    opv[-1] = len(distances) - 1
+    plt.figure(figsize=(12, 6))
+    sns.lineplot(x=range(len(distances)), y=distances)
+    plt.scatter(opv, [distances[i] for i in opv], color='red')
+    plt.title('Cosine Distances with Optimal Peak Values')
+    plt.savefig('cosine_distances.png')
+    plt.clf()
+
+
 def prepare_text_chunks(processed_data, distances):
     """
     Prepares the final text chunks for dispatch to the language model.
@@ -323,6 +333,9 @@ def prepare_text_chunks(processed_data, distances):
     """
     
     opv = optimized_peak_values(processed_data, distances)
+
+    log_distances_img_file(distances, opv)
+
     pv = merge_small_chunks(processed_data, opv)
     print(pv)
     data_chunks = [processed_data[pv[i]:pv[i+1]] for i in range(len(pv)-1)]
